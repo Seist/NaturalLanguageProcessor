@@ -1,0 +1,2 @@
+NaturalLanguageProcessor is a world development bot for Everybody Edits and is designed to interpret the natural English languages, thereby removing the need for commands.
+An example of a "command" in NLP: "replace gray basic blocks with special fully black"
