@@ -119,7 +119,7 @@ namespace NaturalLanguageProcessor
             // Using statement to automatically dispose of resources once done.
             using (var reader = new StreamReader("aliases.txt"))
             {
-                String line = String.Empty;
+                String line;
 
                 // Read line while checking if it's empty.
                 while ((line = reader.ReadLine()) != null)
@@ -155,7 +155,6 @@ namespace NaturalLanguageProcessor
             var toRemove = new List<int>();
 
             // List form of percentMatches (needed for sorting).
-            var listPercentMatches = new List<KeyValuePair<int, double>>();
 
             // The resulting block IDs
             var results = new List<int>(amountToReturn);
@@ -293,14 +292,14 @@ namespace NaturalLanguageProcessor
 
             #region Sort all the results
 
-            listPercentMatches = percentMatches.ToList();
+            List<KeyValuePair<int, double>> listPercentMatches = percentMatches.ToList();
 
             listPercentMatches.Sort(
-                (firstPair, nextPair) => { return amountShared[firstPair.Key].CompareTo(amountShared[nextPair.Key]); });
+                (firstPair, nextPair) => amountShared[firstPair.Key].CompareTo(amountShared[nextPair.Key]));
 
             listPercentMatches.Reverse();
 
-            listPercentMatches.Sort((firstPair, nextPair) => { return firstPair.Value.CompareTo(nextPair.Value); });
+            listPercentMatches.Sort((firstPair, nextPair) => firstPair.Value.CompareTo(nextPair.Value));
 
             listPercentMatches.Reverse();
 
@@ -346,7 +345,7 @@ namespace NaturalLanguageProcessor
         /// <summary>
         ///     Gets all the entries that contain String s
         /// </summary>
-        private static List<KeyValuePair<String, int>> GetEntriesContainingString(String s)
+        private static IEnumerable<KeyValuePair<string, int>> GetEntriesContainingString(String s)
         {
             var matches = new List<KeyValuePair<String, int>>();
 
