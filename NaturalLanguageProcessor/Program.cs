@@ -1,15 +1,19 @@
-﻿namespace NaturalLanguageProcessor
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading;
-    using Skylight;
-    using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Skylight;
 
-    class Program
+namespace NaturalLanguageProcessor
+{
+    internal class Program
     {
+        private static readonly Room r = new Room("PWpGz9IPyba0I");
+
+        private static readonly Bot b = new Bot(r, Console.ReadLine(), Console.ReadLine());
+
+        private static readonly List<KeyValuePair<String, int>> Aliases = new List<KeyValuePair<String, int>>();
+
         private static void Main(String[] args)
         {
             LoadBlockAliases();
@@ -26,7 +30,7 @@
                 int id = GetId(phrase)[0];
                 Console.WriteLine("Result: {0}", (id == -1) ? "none" : id.ToString());
 
-                foreach (KeyValuePair<String, int> entry in Aliases)
+                foreach (var entry in Aliases)
                 {
                     if (entry.Value == id)
                     {
@@ -51,7 +55,7 @@
                 if (args[0] == "replace" || args[0] == "switch")
                 {
                     String firstBlockDescription = String.Empty,
-                           secondBlockDescription = String.Empty;
+                        secondBlockDescription = String.Empty;
 
                     for (int i = 1; i < args.Count(); i++)
                     {
@@ -108,12 +112,12 @@
         }
 
         /// <summary>
-        /// Reads aliases.txt and loads the entries into Aliases for increased comprehension.
+        ///     Reads aliases.txt and loads the entries into Aliases for increased comprehension.
         /// </summary>
         private static void LoadBlockAliases()
         {
             // Using statement to automatically dispose of resources once done.
-            using (StreamReader reader = new StreamReader("aliases.txt"))
+            using (var reader = new StreamReader("aliases.txt"))
             {
                 String line = String.Empty;
 
@@ -132,35 +136,39 @@
         }
 
         /// <summary>
-        /// Gets the Ids that are considered similar to the input phrase.
+        ///     Gets the Ids that are considered similar to the input phrase.
         /// </summary>
         private static List<int> GetId(String phrase, int amountToReturn = 10)
         {
             #region Declaration of lists, arrays, and dictionaries
+
             // An array of each word in the description.
             String[] words = phrase.Split(' ');
 
             // [block ID] = amount of entries that contain a shared word.
-            Dictionary<int, int> amountShared = new Dictionary<int, int>();
+            var amountShared = new Dictionary<int, int>();
 
             // [block ID] = words matched / total amount of words
-            Dictionary<int, double> percentMatches = new Dictionary<int, double>();
+            var percentMatches = new Dictionary<int, double>();
 
             // List of suggested IDs that are invalid (e.g. are backgrounds despite phrase not containing "bg")
-            List<int> toRemove = new List<int>();
+            var toRemove = new List<int>();
 
             // List form of percentMatches (needed for sorting).
-            List<KeyValuePair<int, double>> listPercentMatches = new List<KeyValuePair<int, double>>();
+            var listPercentMatches = new List<KeyValuePair<int, double>>();
 
             // The resulting block IDs
-            List<int> results = new List<int>(amountToReturn);
+            var results = new List<int>(amountToReturn);
+
             #endregion
 
             #region Load amountShared
+
             for (int i = 0; i < words.Count(); i++)
             {
                 #region Check current word
-                foreach (KeyValuePair<String, int> entry in
+
+                foreach (var entry in
                     GetEntriesContainingString(words[i]))
                 {
                     if (!amountShared.Keys.Contains(entry.Value))
@@ -172,12 +180,14 @@
                         amountShared[entry.Value]++;
                     }
                 }
+
                 #endregion
 
                 #region Check previous word + current word
+
                 if (i > 1)
                 {
-                    foreach (KeyValuePair<String, int> entry in
+                    foreach (var entry in
                         GetEntriesContainingString(words[i - 1] + " " + words[i]))
                     {
                         if (!amountShared.Keys.Contains(entry.Value))
@@ -190,12 +200,14 @@
                         }
                     }
                 }
+
                 #endregion
 
                 #region Check previous two words + current word
+
                 if (i > 2)
                 {
-                    foreach (KeyValuePair<String, int> entry in
+                    foreach (var entry in
                         GetEntriesContainingString(words[i - 2] + " " + words[i - 1] + " " + words[i]))
                     {
                         if (!amountShared.Keys.Contains(entry.Value))
@@ -208,13 +220,16 @@
                         }
                     }
                 }
+
                 #endregion
 
                 #region Check previous three words + current word
+
                 if (i > 3)
                 {
-                    foreach (KeyValuePair<String, int> entry in
-                        GetEntriesContainingString(words[i - 3] + " " + words[i - 2] + " " + words[i - 1] + " " + words[i]))
+                    foreach (var entry in
+                        GetEntriesContainingString(words[i - 3] + " " + words[i - 2] + " " + words[i - 1] + " " +
+                                                   words[i]))
                     {
                         if (!amountShared.Keys.Contains(entry.Value))
                         {
@@ -226,11 +241,14 @@
                         }
                     }
                 }
+
                 #endregion
             }
+
             #endregion
 
             #region Remove invalid ids
+
             // Remove invalid phrases
             for (int i = 0; i < amountShared.Count; i++)
             {
@@ -259,36 +277,37 @@
                     amountShared.Remove(id);
                 }
             }
+
             #endregion
 
             #region Load percentMatches
+
             for (int i = 0; i < amountShared.Count; i++)
             {
                 int id = amountShared.ElementAt(i).Key;
 
-                percentMatches[id] = (double)amountShared[id] / (double)words.Count();
+                percentMatches[id] = amountShared[id]/(double) words.Count();
             }
+
             #endregion
 
             #region Sort all the results
+
             listPercentMatches = percentMatches.ToList();
 
-            listPercentMatches.Sort((firstPair, nextPair) =>
-            {
-                return amountShared[firstPair.Key].CompareTo(amountShared[nextPair.Key]);
-            });
+            listPercentMatches.Sort(
+                (firstPair, nextPair) => { return amountShared[firstPair.Key].CompareTo(amountShared[nextPair.Key]); });
 
             listPercentMatches.Reverse();
 
-            listPercentMatches.Sort((firstPair, nextPair) =>
-            {
-                return firstPair.Value.CompareTo(nextPair.Value);
-            });
+            listPercentMatches.Sort((firstPair, nextPair) => { return firstPair.Value.CompareTo(nextPair.Value); });
 
             listPercentMatches.Reverse();
+
             #endregion
 
             #region Remove all but top results
+
             if (listPercentMatches.Count >= amountToReturn)
             {
                 // Remove all the entries from amountToReturn to the end.
@@ -296,10 +315,12 @@
                     amountToReturn - 1,
                     listPercentMatches.Count - amountToReturn);
             }
+
             #endregion
 
             #region Return results
-            foreach (KeyValuePair<int, double> entry in listPercentMatches)
+
+            foreach (var entry in listPercentMatches)
             {
                 results.Add(entry.Key);
 
@@ -317,21 +338,19 @@
             {
                 return results;
             }
-            else
-            {
-                return new List<int>() { -1 };
-            }
+            return new List<int> {-1};
+
             #endregion
         }
 
         /// <summary>
-        /// Gets all the entries that contain String s
+        ///     Gets all the entries that contain String s
         /// </summary>
         private static List<KeyValuePair<String, int>> GetEntriesContainingString(String s)
         {
-            List<KeyValuePair<String, int>> matches = new List<KeyValuePair<String, int>>();
+            var matches = new List<KeyValuePair<String, int>>();
 
-            foreach (KeyValuePair<String, int> entry in Aliases)
+            foreach (var entry in Aliases)
             {
                 if (entry.Key == s)
                 {
@@ -341,11 +360,5 @@
 
             return matches;
         }
-
-        private static Room r = new Room("PWpGz9IPyba0I");
-
-        private static Bot b = new Bot(r, Console.ReadLine(), Console.ReadLine());
-
-        private static List<KeyValuePair<String, int>> Aliases = new List<KeyValuePair<String, int>>();
     }
 }
