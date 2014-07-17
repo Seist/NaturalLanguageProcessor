@@ -24,7 +24,7 @@ namespace NaturalLanguageProcessor
             b.Join();
             Console.Write("Phrase to read: ");
 
-            String phrase = String.Empty;
+            String phrase;
             while ((phrase = Console.ReadLine()) != String.Empty)
             {
                 int id = GetId(phrase)[0];
