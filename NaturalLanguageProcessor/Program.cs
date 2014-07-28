@@ -49,8 +49,7 @@ namespace NaturalLanguageProcessor
                 String rawMessage = e.Message.ToLower();
                 List<String> args = rawMessage.Split(' ').ToList();
 
-                if (args.Count() < 2)
-                    return;
+                
 
                 if (args[0] == "replace" || args[0] == "switch")
                 {
@@ -107,6 +106,140 @@ namespace NaturalLanguageProcessor
                         for (int y = 0; y < r.Height; y++)
                             if (r.Map[x, y, 0].Id == oldBlockId)
                                 b.Push.Build(newBlockId, x, y);
+                }
+                // troll green brick on top of the brown brick
+                else if (args[0] == "troll")
+                {
+                    int depth = 5;
+                    String firstBlockDescription = String.Empty,
+                        secondBlockDescription = String.Empty;
+
+                    for (int i = 1; i < args.Count(); i++)
+                    {
+                        if (args[i] == "the" ||
+                            args[i] == "those" ||
+                            args[i] == "these" ||
+                            args[i] == "a" ||
+                            args[i] == "an")
+                        {
+                            args.RemoveAt(i);
+                        }
+                    }
+
+                    // troll green brick on top of brown brick
+
+                    for (int i = 1; i < args.Count(); i++)
+                    {
+                        if (args[i] == "on")
+                        {
+                            if (args.Count() >= i + 1)
+                            {
+                                if (args[i + 1] == "top")
+                                    args.RemoveAt(i + 1);
+                                if (args[i + 2] == "of")
+                                    args.RemoveAt(i + 2);
+                            }
+                            // i == 3
+                            // troll green brick on brown brick
+
+                            // Get the words from beginning to present.
+                            for (int j = 1; j < i; j++)
+                            {
+                                secondBlockDescription += args[j] + " ";
+                            }
+
+                            // Get the words from present to end.
+                            for (int j = i + 1; j < args.Count(); j++)
+                            {
+                                firstBlockDescription += args[j] + " ";
+                            }
+                        }
+                    }
+
+                    int firstBlockId = GetId(firstBlockDescription)[0],
+                        secondBlockId = GetId(secondBlockDescription)[0];
+
+                    if (firstBlockId == -1 && secondBlockId == -1)
+                    {
+                        b.Push.Say("I didn't catch that either of those blocks. Try harder.");
+                        return;
+                    }
+                    else if (firstBlockId == -1)
+                    {
+                        b.Push.Say("I didn't catch that first block. Try rephrasing it.");
+                        return;
+                    }
+                    else if (secondBlockId == -1)
+                    {
+                        b.Push.Say("I didn't catch that second block. Try rephrasing it.");
+                        return;
+                    }
+
+                    // Troll it up.
+                    for (int x = e.Speaker.BlockX - 20; x <= e.Speaker.BlockX + 20; x++)
+                    {
+                        for (int y = e.Speaker.BlockY - 15; y <= e.Speaker.BlockY + 15; y++)
+                        {
+                            if (r.Map[x, y, 0].Id == firstBlockId && r.Map[x, y - 1, 0].Id == 0)
+                            {
+                                for (int d = y; d < depth + y; d++)
+                                {
+                                    if (r.Map[x, d, 0].Id == firstBlockId && Tools.Ran.Next(1, 4) == 3)
+                                    {
+                                        b.Push.Build(new Block(secondBlockId, x, d));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (args[0] == "move")
+                {
+                    bool up = false, down = false, left = false, right = false;
+                    int difference = 0;
+
+                    for (int i = 1; i < args.Count(); i++)
+                    {
+                        if (args[i] == "up")
+                        {
+                            up = true;
+                            continue;
+                        }
+                        else if (args[i] == "down")
+                        {
+                            down = true;
+                            continue;
+                        }
+                        else if (args[i] == "left")
+                        {
+                            left = true;
+                            continue;
+                        }
+                        else if (args[i] == "right")
+                        {
+                            right = true;
+                            continue;
+                        }
+
+                        int.TryParse(args[i], out difference);
+
+                    }
+
+                    if (difference == 0)
+                        difference = 5;
+
+                    if (!(up ^ down ^ left ^ right))
+                    {
+                        b.Push.Say("I'm confused - do you want me to move it up, down, left, or right?");
+                    }
+                    else
+                    {
+                        for (int x = 50; x < 100; x++)
+                            for (int y = 20; y > 0; y--)
+                                b.Push.Build(r.Map[x, y, 0].Id,
+                                    x + (left ? -difference : right ? difference : 0),
+                                    y + (up ? -difference : down ? difference : 0));
+                    }
                 }
             }
         }
