@@ -8,7 +8,7 @@ namespace NaturalLanguageProcessor
 {
     internal class Program
     {
-        private static readonly Room r = new Room("PWpGz9IPyba0I");
+        private static readonly Room r = new Room("PWkDElHAYnbEI");
 
         private static readonly Bot b = new Bot(r, Console.ReadLine(), Console.ReadLine());
 
@@ -47,200 +47,248 @@ namespace NaturalLanguageProcessor
             if (e.Speaker.Name == r.Owner.Name)
             {
                 String rawMessage = e.Message.ToLower();
-                List<String> args = rawMessage.Split(' ').ToList();
+                List<String> words = rawMessage.Split(' ').ToList();
 
-                
+                if (words[0] != "bot,")
+                    return;
 
-                if (args[0] == "replace" || args[0] == "switch")
+                words.RemoveAt(0);
+
+                for (int i = 1; i < words.Count(); i++)
+                    {
+                        if (words[i] == "the" ||
+                            words[i] == "those" ||
+                            words[i] == "these" ||
+                            words[i] == "a" ||
+                            words[i] == "an")
+                        {
+                            words.RemoveAt(i);
+                        }
+                    }
+
+                if (words[0] == "replace" || words[0] == "switch")
                 {
-                    String firstBlockDescription = String.Empty,
-                        secondBlockDescription = String.Empty;
-
-                    for (int i = 1; i < args.Count(); i++)
-                    {
-                        if (args[i] == "the" ||
-                            args[i] == "those" ||
-                            args[i] == "these" ||
-                            args[i] == "a" ||
-                            args[i] == "an")
-                        {
-                            args.RemoveAt(i);
-                        }
-                    }
-
-                    for (int i = 1; i < args.Count(); i++)
-                    {
-                        if (args[i] == "with")
-                        {
-                            // Get the words from beginning to present.
-                            for (int j = 1; j < i; j++)
-                            {
-                                firstBlockDescription += args[j] + " ";
-                            }
-
-                            // Get the words from present to end.
-                            for (int j = i + 1; j < args.Count(); j++)
-                            {
-                                secondBlockDescription += args[j] + " ";
-                            }
-                        }
-                    }
-
-                    int oldBlockId = GetId(firstBlockDescription)[0],
-                        newBlockId = GetId(secondBlockDescription)[0];
-
-                    if (oldBlockId == -1 && newBlockId == -1)
-                    {
-                        b.Push.Say("I didn't catch that either of those blocks. Try harder.");
-                    }
-                    else if (oldBlockId == -1)
-                    {
-                        b.Push.Say("I didn't catch that first block. Try rephrasing it.");
-                    }
-                    else if (newBlockId == -1)
-                    {
-                        b.Push.Say("I didn't catch that second block. Try rephrasing it.");
-                    }
-
-                    for (int x = 0; x < r.Width; x++)
-                        for (int y = 0; y < r.Height; y++)
-                            if (r.Map[x, y, 0].Id == oldBlockId)
-                                b.Push.Build(newBlockId, x, y);
+                    Replace(words, e.Speaker);
                 }
-                // troll green brick on top of the brown brick
-                else if (args[0] == "troll")
+                else if (words[0] == "troll")
                 {
-                    int depth = 5;
-                    String firstBlockDescription = String.Empty,
-                        secondBlockDescription = String.Empty;
-
-                    for (int i = 1; i < args.Count(); i++)
+                    Troll(words, e.Speaker);
+                }
+                else if (words[0] == "move")
+                {
+                    Move(words, e.Speaker);
+                }
+                else if (words[0] == "draw" && words[1] == "circle")
+                {
+                    int radius = 20;
+                    for (int i = 0; i < words.Count; i++)
                     {
-                        if (args[i] == "the" ||
-                            args[i] == "those" ||
-                            args[i] == "these" ||
-                            args[i] == "a" ||
-                            args[i] == "an")
+                        int.TryParse(words[i], out radius);
+                    }
+
+                    for (double i = 0.0; i < 360.0; i += 1)
+                    {
+                        double angle = i * System.Math.PI / 180;
+                        int x = (int)(e.Speaker.BlockX + radius * System.Math.Cos(angle));
+                        int y = (int)(e.Speaker.BlockY + radius * System.Math.Sin(angle));
+
+                        if (r.Map[x,y,0].Id == 0)
+                            b.Push.Build(BlockIds.Blocks.Basic.PURPLE, x, y);
+                    }
+                }
+            }
+        }
+
+        private static void Troll(List<String> words, Player speaker)
+        {
+            int depth = 5;
+            String firstBlockDescription = String.Empty,
+                secondBlockDescription = String.Empty;
+
+            words.RemoveAt(0);
+
+            // troll green brick on top of brown brick
+
+            for (int i = 0; i < words.Count(); i++)
+            {
+                if (words[i] == "on")
+                {
+                    if (words.Count() >= i + 1)
+                    {
+                        if (words[i + 1] == "top")
+                            words.RemoveAt(i + 1);
+                        if (words[i + 2] == "of")
+                            words.RemoveAt(i + 2);
+                    }
+
+                    words.RemoveAt(i);
+
+                    // i == 3
+                    // green brick on brown brick
+
+                    // Get the words from beginning to present.
+                    for (int j = 0; j < i; j++)
+                    {
+                        secondBlockDescription += words[j] + " ";
+                    }
+
+                    // Get the words from present to end.
+                    for (int j = i; j < words.Count(); j++)
+                    {
+                        firstBlockDescription += words[j] + " ";
+                    }
+                }
+            }
+
+            int firstBlockId = GetId(firstBlockDescription)[0],
+                secondBlockId = GetId(secondBlockDescription)[0];
+
+            if (firstBlockId == -1 && secondBlockId == -1)
+            {
+                b.Push.Say("I didn't catch that either of those blocks. Try harder.");
+                return;
+            }
+            else if (firstBlockId == -1)
+            {
+                b.Push.Say("I didn't catch that first block. Try rephrasing it.");
+                return;
+            }
+            else if (secondBlockId == -1)
+            {
+                b.Push.Say("I didn't catch that second block. Try rephrasing it.");
+                return;
+            }
+
+            // Troll it up.
+            for (int x = speaker.BlockX - 20; x <= speaker.BlockX + 20; x++)
+            {
+                for (int y = speaker.BlockY - 15; y <= speaker.BlockY + 15; y++)
+                {
+                    if (r.Map[x, y, 0].Id == firstBlockId && r.Map[x, y - 1, 0].Id == 0)
+                    {
+                        for (int d = y; d < depth + y; d++)
                         {
-                            args.RemoveAt(i);
-                        }
-                    }
-
-                    // troll green brick on top of brown brick
-
-                    for (int i = 1; i < args.Count(); i++)
-                    {
-                        if (args[i] == "on")
-                        {
-                            if (args.Count() >= i + 1)
+                            if (r.Map[x, d, 0].Id == firstBlockId && Tools.Ran.Next(1, 4) == 3)
                             {
-                                if (args[i + 1] == "top")
-                                    args.RemoveAt(i + 1);
-                                if (args[i + 2] == "of")
-                                    args.RemoveAt(i + 2);
-                            }
-                            // i == 3
-                            // troll green brick on brown brick
-
-                            // Get the words from beginning to present.
-                            for (int j = 1; j < i; j++)
-                            {
-                                secondBlockDescription += args[j] + " ";
-                            }
-
-                            // Get the words from present to end.
-                            for (int j = i + 1; j < args.Count(); j++)
-                            {
-                                firstBlockDescription += args[j] + " ";
-                            }
-                        }
-                    }
-
-                    int firstBlockId = GetId(firstBlockDescription)[0],
-                        secondBlockId = GetId(secondBlockDescription)[0];
-
-                    if (firstBlockId == -1 && secondBlockId == -1)
-                    {
-                        b.Push.Say("I didn't catch that either of those blocks. Try harder.");
-                        return;
-                    }
-                    else if (firstBlockId == -1)
-                    {
-                        b.Push.Say("I didn't catch that first block. Try rephrasing it.");
-                        return;
-                    }
-                    else if (secondBlockId == -1)
-                    {
-                        b.Push.Say("I didn't catch that second block. Try rephrasing it.");
-                        return;
-                    }
-
-                    // Troll it up.
-                    for (int x = e.Speaker.BlockX - 20; x <= e.Speaker.BlockX + 20; x++)
-                    {
-                        for (int y = e.Speaker.BlockY - 15; y <= e.Speaker.BlockY + 15; y++)
-                        {
-                            if (r.Map[x, y, 0].Id == firstBlockId && r.Map[x, y - 1, 0].Id == 0)
-                            {
-                                for (int d = y; d < depth + y; d++)
-                                {
-                                    if (r.Map[x, d, 0].Id == firstBlockId && Tools.Ran.Next(1, 4) == 3)
-                                    {
-                                        b.Push.Build(new Block(secondBlockId, x, d));
-                                    }
-                                }
+                                b.Push.Build(new Block(secondBlockId, x, d));
                             }
                         }
                     }
                 }
-                else if (args[0] == "move")
+            }
+        }
+
+        private static void Replace(List<String> words, Player speaker)
+        {
+            String firstBlockDescription = String.Empty,
+                secondBlockDescription = String.Empty;
+
+            for (int i = 1; i < words.Count(); i++)
+            {
+                if (words[i] == "with")
                 {
-                    bool up = false, down = false, left = false, right = false;
-                    int difference = 0;
-
-                    for (int i = 1; i < args.Count(); i++)
+                    // Get the words from beginning to present.
+                    for (int j = 1; j < i; j++)
                     {
-                        if (args[i] == "up")
-                        {
-                            up = true;
-                            continue;
-                        }
-                        else if (args[i] == "down")
-                        {
-                            down = true;
-                            continue;
-                        }
-                        else if (args[i] == "left")
-                        {
-                            left = true;
-                            continue;
-                        }
-                        else if (args[i] == "right")
-                        {
-                            right = true;
-                            continue;
-                        }
-
-                        int.TryParse(args[i], out difference);
-
+                        firstBlockDescription += words[j] + " ";
                     }
 
-                    if (difference == 0)
-                        difference = 5;
-
-                    if (!(up ^ down ^ left ^ right))
+                    // Get the words from present to end.
+                    for (int j = i + 1; j < words.Count(); j++)
                     {
-                        b.Push.Say("I'm confused - do you want me to move it up, down, left, or right?");
-                    }
-                    else
-                    {
-                        for (int x = 50; x < 100; x++)
-                            for (int y = 20; y > 0; y--)
-                                b.Push.Build(r.Map[x, y, 0].Id,
-                                    x + (left ? -difference : right ? difference : 0),
-                                    y + (up ? -difference : down ? difference : 0));
+                        secondBlockDescription += words[j] + " ";
                     }
                 }
+            }
+
+            int oldBlockId = GetId(firstBlockDescription)[0],
+                newBlockId = GetId(secondBlockDescription)[0];
+
+            if (oldBlockId == -1 && newBlockId == -1)
+            {
+                b.Push.Say("I didn't catch that either of those blocks. Try harder.");
+            }
+            else if (oldBlockId == -1)
+            {
+                b.Push.Say("I didn't catch that first block. Try rephrasing it.");
+            }
+            else if (newBlockId == -1)
+            {
+                b.Push.Say("I didn't catch that second block. Try rephrasing it.");
+            }
+
+            for (int x = 0; x < r.Width; x++)
+                for (int y = 0; y < r.Height; y++)
+                    if (r.Map[x, y, 0].Id == oldBlockId)
+                        b.Push.Build(newBlockId, x, y);
+        }
+
+        private static void Move(List<String> words, Player speaker)
+        {
+            bool up = false, down = false, left = false, right = false;
+            int difference = 0;
+
+            for (int i = 1; i < words.Count(); i++)
+            {
+                if (words[i] == "up")
+                {
+                    up = true;
+                    continue;
+                }
+                else if (words[i] == "down")
+                {
+                    down = true;
+                    continue;
+                }
+                else if (words[i] == "left")
+                {
+                    left = true;
+                    continue;
+                }
+                else if (words[i] == "right")
+                {
+                    right = true;
+                    continue;
+                }
+
+                int.TryParse(words[i], out difference);
+
+            }
+
+            if (difference == 0)
+                difference = 5;
+
+            if (!(up ^ down ^ left ^ right))
+            {
+                b.Push.Say("I'm confused - do you want me to move it up, down, left, or right?");
+            }
+            else
+            {
+                var newMap = new List<Block>();
+
+                for (int x = 1; x < r.Width - 1; x++)
+                {
+                    for (int y = 1; y < r.Height - 1; y++)
+                    {
+                        if (r.Map[x, y, 0].Id != 0)
+                        {
+                            newMap.Add(new Block(r.Map[x, y, 0].Id,
+                                x + (left ? -difference : right ? difference : 0),
+                                y + (up ? -difference : down ? difference : 0)));
+                        }
+
+                        if (r.Map[x, y, 1].Id != 0)
+                        {
+                            newMap.Add(new Block(r.Map[x, y, 1].Id,
+                                x + (left ? -difference : right ? difference : 0),
+                                y + (up ? -difference : down ? difference : 0)));
+                        }
+                    }
+                }
+
+                b.Push.Clear();
+                newMap.Shuffle();
+                b.Push.Build(newMap);
             }
         }
 

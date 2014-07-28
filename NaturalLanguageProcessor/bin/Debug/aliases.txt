@@ -1333,7 +1333,6 @@ iron:144
 iron:145
 japanese symbol:283
 japanese:283
-jungle head:193
 jungle platform:194
 jungle pot:199
 jungle ruins blue:197
@@ -1353,7 +1352,7 @@ jungle ruins:618
 jungle ruins:619
 jungle ruins:620
 jungle vase:199
-jungle yellow:198
+yellow:198
 jungle:193
 jungle:194
 jungle:195
@@ -2128,7 +2127,6 @@ right:99
 ring:558
 rings:120
 robot:32
-rock head:193
 rock:176
 rock:231
 rock:336
