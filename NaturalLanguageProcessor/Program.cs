@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Skylight;
+using System.Drawing;
+using System.Threading;
 
 namespace NaturalLanguageProcessor
 {
@@ -22,11 +24,13 @@ namespace NaturalLanguageProcessor
 
             b.LogIn();
             b.Join();
-            Console.Write("Phrase to read: ");
+
+            Console.Write("> ");
 
             String phrase;
             while ((phrase = Console.ReadLine()) != String.Empty)
             {
+                //b.Push.Say(phrase);
                 int id = GetId(phrase)[0];
                 Console.WriteLine("Result: {0}", (id == -1) ? "none" : id.ToString());
 
@@ -38,16 +42,19 @@ namespace NaturalLanguageProcessor
                     }
                 }
 
-                Console.Write("\nPhrase to read: ");
+                Console.Write("\n> ");
             }
         }
 
         private static void ChatHandler(ChatEventArgs e)
         {
+            Console.Write("Chat message: " + e.Message + Environment.NewLine);
+
             if (e.Speaker.Name == r.Owner.Name)
             {
-                String rawMessage = e.Message.ToLower();
-                List<String> words = rawMessage.Split(' ').ToList();
+                String originalMessage = e.Message; // The original, if that's ever going to be useful.
+                String rawMessage = originalMessage.ToLower(); // A copy to work with.
+                List<String> words = rawMessage.Split(' ').ToList(); // A list to deal with each word individually
 
                 if (words[0] != "bot,")
                     return;
@@ -57,6 +64,7 @@ namespace NaturalLanguageProcessor
                 for (int i = 1; i < words.Count(); i++)
                     {
                         if (words[i] == "the" ||
+                            words[i] == "this" ||
                             words[i] == "those" ||
                             words[i] == "these" ||
                             words[i] == "a" ||
@@ -65,6 +73,16 @@ namespace NaturalLanguageProcessor
                             words.RemoveAt(i);
                         }
                     }
+
+                rawMessage = String.Empty;
+                foreach (String str in words)
+                {
+                    rawMessage += str + " ";
+                }
+
+                rawMessage = rawMessage.Substring(0, rawMessage.Length - 1); // Remove the last space
+
+                Console.WriteLine("    After trimming: " + rawMessage);
 
                 if (words[0] == "replace" || words[0] == "switch")
                 {
@@ -92,9 +110,106 @@ namespace NaturalLanguageProcessor
                         int x = (int)(e.Speaker.BlockX + radius * System.Math.Cos(angle));
                         int y = (int)(e.Speaker.BlockY + radius * System.Math.Sin(angle));
 
-                        if (r.Map[x,y,0].Id == 0)
+                        if (r.Map[x, y, 0].Id == 0)
                             b.Push.Build(BlockIds.Blocks.Basic.PURPLE, x, y);
+                        else
+                            Console.WriteLine("    ID:" + r.Map[x, y, 0].Id);
                     }
+                }
+                else if (words[0] == "fill")
+                {
+                    words.RemoveAt(0);
+                    String blockDescription = String.Empty;
+
+                    for (int i = 0; i < words.Count; i++)
+                    {
+                        if (words[i] == "with")
+                            words.RemoveAt(i);
+
+                        blockDescription += " " + words[i];
+                    }
+
+                    int id = GetId(blockDescription)[0];
+
+                    if (id == -1)
+                    {
+                        b.Push.Say("Sorry, didn't catch that block. Try rephasing it.");
+                        return;
+                    }
+
+                    int x = e.Speaker.BlockX, y = e.Speaker.BlockY;
+
+                    List<Point> points = new List<Point>();
+                    Block[, ,] tempMap = r.Map;
+
+                    do
+                    {
+                        if (tempMap[x, y, 0].Id == 0)
+                        {
+                            b.Push.Build(id, x, y);
+                            tempMap[x, y, 0] = new Block(id, x, y); ;
+
+                            for (int ind = 0; ind < points.Count; ind++)
+                            {
+                                if (points[ind].X == x && points[ind].Y == y)
+                                {
+                                    points.RemoveAt(ind);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var RanPoint = points[Tools.Ran.Next(points.Count)];
+                            x = RanPoint.X;
+                            y = RanPoint.Y;
+
+                            for (int ind = 0; ind < points.Count; ind++)
+                            {
+                                if (points[ind].X == x && points[ind].Y == y)
+                                {
+                                    points.RemoveAt(ind);
+                                }
+                            }
+                        }
+
+                        x++;
+
+                        if (tempMap[x, y, 0].Id == 0)
+                        {
+                            b.Push.Build(id, x, y);
+                            tempMap[x, y, 0] = new Block(id, x, y); ;
+                            points.Add(new Point(x, y));
+                        }
+                        x -= 2;
+
+                        if (tempMap[x, y, 0].Id == 0)
+                        {
+                            b.Push.Build(id, x, y);
+                            tempMap[x, y, 0] = new Block(id, x, y); ;
+                            points.Add(new Point(x, y));
+                        }
+
+                        x++;
+                        y++;
+
+                        if (tempMap[x, y, 0].Id == 0)
+                        {
+                            b.Push.Build(id, x, y);
+                            tempMap[x, y, 0] = new Block(id, x, y); ;
+                            points.Add(new Point(x, y));
+                        }
+
+                        y -= 2;
+
+                        if (tempMap[x, y, 0].Id == 0)
+                        {
+                            b.Push.Build(id, x, y);
+                            tempMap[x, y, 0] = new Block(id, x, y); ;
+                            points.Add(new Point(x, y));
+                        }
+
+                        y++;
+                    } while (points.Count > 0);
                 }
             }
         }
@@ -204,6 +319,10 @@ namespace NaturalLanguageProcessor
             int oldBlockId = GetId(firstBlockDescription)[0],
                 newBlockId = GetId(secondBlockDescription)[0];
 
+            if (oldBlockId == -1) int.TryParse(firstBlockDescription, out oldBlockId);
+            if (newBlockId == -1) int.TryParse(secondBlockDescription, out newBlockId);
+
+
             if (oldBlockId == -1 && newBlockId == -1)
             {
                 b.Push.Say("I didn't catch that either of those blocks. Try harder.");
@@ -219,8 +338,10 @@ namespace NaturalLanguageProcessor
 
             for (int x = 0; x < r.Width; x++)
                 for (int y = 0; y < r.Height; y++)
-                    if (r.Map[x, y, 0].Id == oldBlockId)
+                    if (r.Map[x, y, 0].Id == oldBlockId || r.Map[x, y, 1].Id == oldBlockId)
+                    {
                         b.Push.Build(newBlockId, x, y);
+                    }
         }
 
         private static void Move(List<String> words, Player speaker)

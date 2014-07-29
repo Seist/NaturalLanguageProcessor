@@ -221,7 +221,6 @@ black and yellow pole:324
 black block:33
 black secret:243
 black stripes:22
-black:0
 black:101
 black:182
 black:243
@@ -774,8 +773,7 @@ dark red:12
 dark right ninja roof:280
 dark window:281
 dark yellow:21
-dark yellow:22
-dark:0
+dark yellow:2
 dark:10
 dark:132
 dark:142
