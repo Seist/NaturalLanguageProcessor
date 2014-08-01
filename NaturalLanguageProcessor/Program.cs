@@ -10,9 +10,9 @@ namespace NaturalLanguageProcessor
 {
     internal class Program
     {
-        private static readonly Room r = new Room("PWkDElHAYnbEI");
+        private static Room r;
 
-        private static readonly Bot b = new Bot(r, Console.ReadLine(), Console.ReadLine());
+        private static Bot b;
 
         private static readonly List<KeyValuePair<String, int>> Aliases = new List<KeyValuePair<String, int>>();
 
@@ -20,10 +20,27 @@ namespace NaturalLanguageProcessor
         {
             LoadBlockAliases();
 
+            Console.Write("World ID:\n> ");
+            string wid = Console.ReadLine();
+
+            Console.Write("Email:\n> ");
+            string em = Console.ReadLine();
+
+            Console.Write("Password:\n> ");
+            string pw = Console.ReadLine();
+
+            r = new Room(wid);
+
+            b = new Bot(r, em, pw);
+
             r.Pull.NormalChatEvent += ChatHandler;
+            Tools.ProgramMessage += delegate(string s) { Console.WriteLine(s); };
 
             b.LogIn();
             b.Join();
+
+            b.Push.SetSmiley(SmileyIds.Shop.ROBOT);
+            // b.Push.Teleport(201, 101, "takoman02");
 
             Console.Write("> ");
 
@@ -62,17 +79,17 @@ namespace NaturalLanguageProcessor
                 words.RemoveAt(0);
 
                 for (int i = 1; i < words.Count(); i++)
+                {
+                    if (words[i] == "the" ||
+                        words[i] == "this" ||
+                        words[i] == "those" ||
+                        words[i] == "these" ||
+                        words[i] == "a" ||
+                        words[i] == "an")
                     {
-                        if (words[i] == "the" ||
-                            words[i] == "this" ||
-                            words[i] == "those" ||
-                            words[i] == "these" ||
-                            words[i] == "a" ||
-                            words[i] == "an")
-                        {
-                            words.RemoveAt(i);
-                        }
+                        words.RemoveAt(i);
                     }
+                }
 
                 rawMessage = String.Empty;
                 foreach (String str in words)
@@ -110,10 +127,8 @@ namespace NaturalLanguageProcessor
                         int x = (int)(e.Speaker.BlockX + radius * System.Math.Cos(angle));
                         int y = (int)(e.Speaker.BlockY + radius * System.Math.Sin(angle));
 
-                        if (r.Map[x, y, 0].Id == 0)
-                            b.Push.Build(BlockIds.Blocks.Basic.PURPLE, x, y);
-                        else
-                            Console.WriteLine("    ID:" + r.Map[x, y, 0].Id);
+                        if (r.Map[x, y, 1].Id == 0)
+                            b.Push.Build(BlockIds.Background.Basic.PURPLE, x, y);
                     }
                 }
                 else if (words[0] == "fill")
@@ -138,80 +153,14 @@ namespace NaturalLanguageProcessor
                     }
 
                     int x = e.Speaker.BlockX, y = e.Speaker.BlockY;
+                    int replaceId = r.Map[x, y, 0].Id;
 
-                    List<Point> points = new List<Point>();
-                    Block[, ,] tempMap = r.Map;
-
-                    do
-                    {
-                        if (tempMap[x, y, 0].Id == 0)
-                        {
-                            b.Push.Build(id, x, y);
-                            tempMap[x, y, 0] = new Block(id, x, y); ;
-
-                            for (int ind = 0; ind < points.Count; ind++)
-                            {
-                                if (points[ind].X == x && points[ind].Y == y)
-                                {
-                                    points.RemoveAt(ind);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            var RanPoint = points[Tools.Ran.Next(points.Count)];
-                            x = RanPoint.X;
-                            y = RanPoint.Y;
-
-                            for (int ind = 0; ind < points.Count; ind++)
-                            {
-                                if (points[ind].X == x && points[ind].Y == y)
-                                {
-                                    points.RemoveAt(ind);
-                                }
-                            }
-                        }
-
-                        x++;
-
-                        if (tempMap[x, y, 0].Id == 0)
-                        {
-                            b.Push.Build(id, x, y);
-                            tempMap[x, y, 0] = new Block(id, x, y); ;
-                            points.Add(new Point(x, y));
-                        }
-                        x -= 2;
-
-                        if (tempMap[x, y, 0].Id == 0)
-                        {
-                            b.Push.Build(id, x, y);
-                            tempMap[x, y, 0] = new Block(id, x, y); ;
-                            points.Add(new Point(x, y));
-                        }
-
-                        x++;
-                        y++;
-
-                        if (tempMap[x, y, 0].Id == 0)
-                        {
-                            b.Push.Build(id, x, y);
-                            tempMap[x, y, 0] = new Block(id, x, y); ;
-                            points.Add(new Point(x, y));
-                        }
-
-                        y -= 2;
-
-                        if (tempMap[x, y, 0].Id == 0)
-                        {
-                            b.Push.Build(id, x, y);
-                            tempMap[x, y, 0] = new Block(id, x, y); ;
-                            points.Add(new Point(x, y));
-                        }
-
-                        y++;
-                    } while (points.Count > 0);
+                    Fill(x, y, id, replaceId);
                 }
             }
+
+            Console.SetCursorPosition(0, Console.CursorTop - 1);
+            Console.WriteLine("> ");
         }
 
         private static void Troll(List<String> words, Player speaker)
@@ -413,6 +362,64 @@ namespace NaturalLanguageProcessor
             }
         }
 
+        private static void Fill(int x, int y, int fillId, int replaceId = 0)
+        {
+            List<Point> points = new List<Point>(); // Point is from System.Drawing & lets you remember x's/y's.
+            Block[, ,] map = r.Map;                 // replace with whatever method you use to read the map.
+                                                    //   It needs to contain all the blocks in the room.
+                                                    //   I use a three-dimensional array of Block objects.
+                                                    //   Blocks are found by typing Map[x,y,layer].
+
+            do // using a do-while instead of a while because the list starts at 0 and it wouldn't execute.
+            {
+                // if you're on the replace id, replace it and remove it from the list.
+                if (map[x, y, 0].Id == replaceId)
+                {
+                    b.Push.Build(fillId, x, y);
+
+                    map[x, y, 0] = new Block(fillId, x, y);
+
+                    for (int ind = 0; ind < points.Count; ind++)
+                        if (points[ind].X == x && points[ind].Y == y)
+                            points.RemoveAt(ind);
+                }
+                else // If you're not on the replace id, you're on the border. Select a random point and remove it from the list.
+                {
+                    var RanPoint = points[Tools.Ran.Next(points.Count)]; // Do not use `new Random` here. Do it outside the loop.
+
+                    x = RanPoint.X;
+
+                    y = RanPoint.Y;
+
+                    for (int ind = 0; ind < points.Count; ind++)
+                        if (points[ind].X == x && points[ind].Y == y)
+                            points.RemoveAt(ind);
+                }
+
+                // Where there is replaceId, draw and add a point. Update the map and it becomes exponentially faster.
+                UpdatePoint(x + 1, y, fillId, replaceId, ref map, ref points);
+                UpdatePoint(x - 1, y, fillId, replaceId, ref map, ref points);
+                UpdatePoint(x, y + 1, fillId, replaceId, ref map, ref points);
+                UpdatePoint(x, y - 1, fillId, replaceId, ref map, ref points);
+
+                // You just added a few points to the list, generally 2-3.
+                // Return, select a random one, delete it, and repeat until there are none left.
+                // What you end up with in the List<Point> points is all the points that have not been checked, aka the ones on the front line.
+            } while (points.Count > 0); // Once the list is empty, it is done.
+        } // end Fill function
+
+        private static void UpdatePoint(int x, int y, int fillId, int replaceId, ref Block[, ,] map, ref List<Point> points)
+        {
+            if (map[x, y, 0].Id == replaceId)
+            {
+                b.Push.Build(fillId, x, y);
+
+                map[x, y, 0] = new Block(fillId, x, y);
+
+                points.Add(new Point(x, y));
+            }
+        }
+
         /// <summary>
         ///     Reads aliases.txt and loads the entries into Aliases for increased comprehension.
         /// </summary>
@@ -587,7 +594,7 @@ namespace NaturalLanguageProcessor
             {
                 int id = amountShared.ElementAt(i).Key;
 
-                percentMatches[id] = amountShared[id]/(double) words.Count();
+                percentMatches[id] = amountShared[id] / (double)words.Count();
             }
 
             #endregion
@@ -639,7 +646,7 @@ namespace NaturalLanguageProcessor
             {
                 return results;
             }
-            return new List<int> {-1};
+            return new List<int> { -1 };
 
             #endregion
         }
